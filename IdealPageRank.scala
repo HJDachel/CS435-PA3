@@ -25,6 +25,7 @@ object IdealPageRank {
       val tempRank = links.join(ranks).values.flatMap {
         case (urls, rank) =>
           val outgoingLinks = urls.split(" ")
+          //For wiki bomb, add Rocky Mountain to the end of the outgoing Links?
           outgoingLinks.map(url => (url, rank / outgoingLinks.length))
       }
       ranks = tempRank.reduceByKey(_+_)
@@ -36,10 +37,13 @@ object IdealPageRank {
     val topTenRDDLong = topTenRDD.map{
       case(x,y) => (x.toLong, y)
     }
+
     val sortedTen = topTenRDDLong.sortBy(_._2, false)
     //topTenRDD.coalesce(1).saveAsTextFile("hdfs://saint-paul:30261/output/")
     val joined = sortedTen.join(titles)
-    joined.saveAsTextFile("hdfs://saint-paul:30261/output/")
+    var sortedJoin = joined.sortBy(_._2._1, false)
+
+    sortedJoin.coalesce(1).saveAsTextFile("hdfs://saint-paul:30261/output/")
 
   }
 }
