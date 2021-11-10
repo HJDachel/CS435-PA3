@@ -19,6 +19,30 @@ object TaxationPageRank {
     val totalLines = titles.count()
     var ranks = links.mapValues(v => 1.0 / totalLines)
 
+    for(i <- 1 to 25){
+      val tempRank = links.join(ranks).values.flatMap {
+        case (urls, rank) =>
+          val outgoingLinks = urls.split(" ")
+          //For wiki bomb, add Rocky Mountain to the end of the outgoing Links?
+          outgoingLinks.map(url => (url, rank / outgoingLinks.length))
+      }
+      ranks = tempRank.reduceByKey(_+_).mapValues((0.15/totalLines) +.85 * _)
+    }
+
+    val sortedRanks = ranks.sortBy(_._2, false)
+    val topTen = sortedRanks.take(10)
+    val topTenRDD = sc.parallelize(topTen)
+    val topTenRDDLong = topTenRDD.map{
+      case(x,y) => (x.toLong, y)
+    }
+
+    val sortedTen = topTenRDDLong.sortBy(_._2, false)
+    //topTenRDD.coalesce(1).saveAsTextFile("hdfs://saint-paul:30261/output/")
+    val joined = sortedTen.join(titles)
+    var sortedJoin = joined.sortBy(_._2._1, false)
+
+    sortedJoin.coalesce(1).saveAsTextFile("hdfs://saint-paul:30261/outputTaxed/")
+
   }
 
 }
